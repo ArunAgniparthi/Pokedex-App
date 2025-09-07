@@ -1,7 +1,14 @@
 <script lang='ts'>
     import {auth,googleProvider} from "$lib/firebase";
-    import {createUserWithEmailAndPassword,signInWithPopup} from "firebase/auth";
+    import {createUserWithEmailAndPassword,signInWithPopup,updateProfile} from "firebase/auth";
     import {goto} from "$app/navigation";
+
+    import * as firebaseApp  from "firebase/app";
+    console.log(firebaseApp);
+    import * as firebaseAuth  from "firebase/auth";
+    console.log(firebaseAuth);
+    import * as svelte  from "svelte";
+    console.log(svelte);
 
     let userName="";
     let email="";
@@ -15,6 +22,7 @@
         errorMessage="";
         try{
             const userCredential=await createUserWithEmailAndPassword(auth,email,password);
+            await updateProfile(userCredential.user,{displayName:userName});
             console.log("SignUp Successful",userCredential.user);
             goto("/dashboard");
         }catch(error:any){

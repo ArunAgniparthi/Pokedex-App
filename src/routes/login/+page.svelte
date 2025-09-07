@@ -2,7 +2,6 @@
     import {auth, googleProvider} from "$lib/firebase";
     import {signInWithEmailAndPassword,signInWithPopup,GoogleAuthProvider,sendPasswordResetEmail} from "firebase/auth";
     import {goto} from "$app/navigation";
-	import type { an } from "vitest/dist/chunks/reporters.d.BFLkQcL6.js";
 
     let email="";
     let password="";

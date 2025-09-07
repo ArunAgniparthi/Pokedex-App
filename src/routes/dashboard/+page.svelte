@@ -12,6 +12,9 @@
     let loading=true;
     let unsubscribeAuth:(()=>void)|null=null;
 
+    let pokemons:any[]=[];
+    let error:string|null=null;
+
     //Profile dropdown control
     function handleDropdown(){
         dropdownOpen=!dropdownOpen;
@@ -81,6 +84,7 @@
     });
            
         document.addEventListener("click",handleDropdownClose);
+        fetchPokemons();
     });
 
     //LogOut
@@ -96,6 +100,31 @@
         if(unsubscribeAuth) unsubscribeAuth();
             document.removeEventListener("click",handleDropdownClose);
     });
+
+    //Fetch Pkemons Dataset
+    async function fetchPokemons() {
+    loading = true;
+    error = null;
+    try {
+      const res = await fetch("https://pokeapi.co/api/v2/pokemon?limit=1000");
+      if (!res.ok) throw new Error("Failed to fetch Pokémon list");
+      const data = await res.json();
+
+      const detailed = await Promise.all(
+        data.results.map(async (p: any) => {
+          const r = await fetch(p.url);
+          return await r.json();
+        })
+      );
+      pokemons = detailed;
+    } catch (err: any) {
+      error = err.message;
+    } finally {
+      loading = false;
+    }
+  }
+
+
 </script>
 <nav class="flex justify-between items-center px-6 py-3 absolute top-0 left-0 w-full bg-black text-white">
     <h1 class="font-extrabold text-xl">POKEDEX</h1>
@@ -104,23 +133,23 @@
         <a href="#" class="hover:text-yellow-300 text-medium">Favoirites</a>
         <a href="#" class="hover:text-yellow-300 text-medium">About Us</a>
 
-        <div class="relative">
-            <button id="profile-button" class="flex items-center space-x-2" on:click={handleDropdown}>
+        <div class="relative max-w-lg">
+            <button id="profile-button" class="flex items-center space-x-2 max-w-lg" on:click={handleDropdown}>
                 {#if profilePhoto}
-                    <img src={profilePhoto} class="h-8 w-8 rounded-full object-cover"/>
+                    <img src={profilePhoto} alt="profile" class="flex items-center justify-center rounded-full h-8 w-8 bg-cover object-cover"/>
                 {:else}
                 <span class="flex items-center justify-center rounded-full h-8 w-8 font-bold bg-yellow-400 text-black">{firstLetter}</span>
                 {/if}
                 <span class="hover:text-yellow-300">Profile</span>
             </button>
             {#if dropdownOpen}
-            <div id="profile-dropdown" class="absolute right-0 mt-2 w-60 bg-black bg-opacity-90 rounded-md text-white">
-                <div class="px-4 py-3 border-b border-yellow-300">
+            <div id="profile-dropdown" class="absolute right-0 mt-2 bg-black bg-opacity-90 rounded-md text-white z-50">
+                <div class="px-4 py-3 border-b max-w-lg border-yellow-300">
                     <div class="flex items-center space-x-3">
                         {#if profilePhoto}
-                            <img src={profilePhoto} alt="Profile" class="h-10 w-10 rounded-full object-cover"/>
+                            <img src={profilePhoto} alt="Profile" class="flex items-center max-w-lg justify-center rounded-full h-10 w-10 bg-cover object-cover"/>
                         {:else}
-                            <span class="bg-yellow-400 text-black font-bold rounded-full w-20 h-10 flex items-center justify-center text-xl">{firstLetter}</span>
+                            <span class="flex items-center justify-center rounded-full h-10 w-10 font-bold bg-yellow-400 text-xl text-black">{firstLetter}</span>
                         {/if}
                         <div>
                             <span class="font-bold">{userName}</span>
@@ -140,3 +169,27 @@
         </div>
     </div>
 </nav>
+
+<!--Pkemon Grid-->
+<div class="p-4 mt-20">
+    {#if error}
+    <h class="text-red-500 font-bold">{error}</h>
+    {:else if loading}
+    <h class="text-black-500 font-bold text-center">Loading Pokemons.....</h>
+    {:else}
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+        {#each pokemons as p }
+            <div class="bg-black/60 flex flex-col items-center text-white hover:scale-105 rounded-xl p-4 mt-2 transition">
+                <img src={p.sprites.front_default} alt={p.name} class="h-20 w-20 mb-0.2" />
+                <h2 class="capitalize font-bold">{p.name}</h2>
+                <p >#{p.id}</p>
+                <div class="flex space-x-2 mt-2">
+                    {#each p.types as t}
+                        <span class="px-2 py-1 text-xs rounded bg-yellow-200 text-black">{t.type.name}</span>                        
+                    {/each}
+                </div>
+            </div>
+        {/each}
+    </div>
+    {/if}
+</div>
