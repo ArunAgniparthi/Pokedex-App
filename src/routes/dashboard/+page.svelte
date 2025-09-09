@@ -3,7 +3,9 @@
     import {signOut,onAuthStateChanged,updateProfile} from "firebase/auth";
     import {doc,setDoc,getDoc} from "firebase/firestore";
     import {goto} from "$app/navigation";
-    import {onMount,onDestroy} from "svelte";
+    import {onMount} from "svelte";
+    import { GraphQLClient, gql } from "graphql-request";
+    import {browser} from "$app/environment"
 
     //variable declaration
     let userName="user";
@@ -15,6 +17,19 @@
     let pokemons:any[]=[];
     let error:string|null=null;
 
+    // GraphQL Client
+    const client = new GraphQLClient("https://beta.pokeapi.co/graphql/v1beta");
+
+    //searching & Filtering
+    let searchTerm="";
+    let selectedType:string|null=null;
+    let pokemonTypes=['normal', 'fighting', 'flying', 'poison', 'ground', 'rock', 'bug',
+                      'ghost', 'steel', 'fire', 'water', 'grass', 'electric', 'psychic',
+                      'ice', 'dragon', 'dark', 'fairy'];
+    let selectedPokemon:any=null;
+    let favorites:number []=[];
+
+                        // FUNCTIONS
     //Profile dropdown control
     function handleDropdown(){
         dropdownOpen=!dropdownOpen;
@@ -44,6 +59,7 @@
 
     //Profile dropdown close
     async function handleDropdownClose(e:MouseEvent) {
+      if(!browser) return;
         const dropdown=document.getElementById("profile-dropdown");
         const button=document.getElementById("profile-button");
         if(dropdown&&button&&!dropdown.contains(e.target as Node)&&!button.contains(e.target as Node)){
@@ -53,6 +69,7 @@
 
     //Load Profile
     onMount(()=>{
+      if(!browser) return;
         unsubscribeAuth=onAuthStateChanged(auth,async (user)=>{
             loading=true;
             try {
@@ -89,6 +106,7 @@
 
     //LogOut
     async function handleLogout() {
+      if(!browser || auth)return;
         try {
             await signOut(auth);
             goto("/login");
@@ -96,33 +114,81 @@
             console.error("Logout error:",error);
         }
     }
-    onDestroy(()=>{
-        if(unsubscribeAuth) unsubscribeAuth();
-            document.removeEventListener("click",handleDropdownClose);
-    });
 
-    //Fetch Pkemons Dataset
+
+    // Fetch Pokemon Dataset using GraphQL
     async function fetchPokemons() {
-    loading = true;
-    error = null;
-    try {
-      const res = await fetch("https://pokeapi.co/api/v2/pokemon?limit=1000");
-      if (!res.ok) throw new Error("Failed to fetch Pokémon list");
-      const data = await res.json();
+        loading = true;
+        error = null;
 
-      const detailed = await Promise.all(
-        data.results.map(async (p: any) => {
-          const r = await fetch(p.url);
-          return await r.json();
-        })
-      );
-      pokemons = detailed;
-    } catch (err: any) {
-      error = err.message;
-    } finally {
-      loading = false;
-    }
-  }
+        try {
+          const query = gql`
+            query {
+              pokemon_v2_pokemon(limit: 1000) {
+                id
+                name
+                pokemon_v2_pokemontypes {
+                  pokemon_v2_type { name }
+                }
+                pokemon_v2_pokemonabilities {
+                  pokemon_v2_ability { name }
+                }
+                pokemon_v2_pokemonstats {
+                  base_stat
+                  pokemon_v2_stat { name }
+                }
+              }
+            }
+          `;
+
+          const data:any = await client.request(query);
+
+          pokemons = data.pokemon_v2_pokemon.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            sprites: {
+              front_default: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.id}.png`
+            },
+            types: p.pokemon_v2_pokemontypes.map((e: any) => e.pokemon_v2_type.name) ,
+            
+            abilities: p.pokemon_v2_pokemonabilities.map((a: any) =>a.pokemon_v2_ability.name),
+            stats: p.pokemon_v2_pokemonstats.map((s: any) => ({
+              name: s.pokemon_v2_stat.name,
+              base_stat: s.base_stat
+            }))
+          }));
+        } catch (err: any) {
+          console.error("Failed to fetch Pokémon",err);
+        } finally {
+          loading = false;
+        }
+      }
+
+      //Searching and Filtering
+      $: filteredPokemons=pokemons.filter((p:any)=>{
+        const matchesName=p.name.toLowerCase().includes(searchTerm.toLocaleLowerCase());
+        const matchesType=selectedType?p.types.includes(selectedType) :true;
+        return matchesName && matchesType;
+      });
+
+      //Details open fun
+      function openSelectedPokemon(p:any){
+        selectedPokemon=p;
+      }
+      //Details close fun
+      function closeSelectedPokemon(){
+        selectedPokemon=null;
+      }
+
+       // --- Toggle favorites ---
+      function toggleFavorite(pokemonId: number) {
+        if (favorites.includes(pokemonId)) {
+          favorites = favorites.filter((id) => id !== pokemonId);
+        } else {
+          favorites = [...favorites, pokemonId];
+        }
+      }
+
 
 
 </script>
@@ -171,25 +237,92 @@
 </nav>
 
 <!--Pkemon Grid-->
-<div class="p-4 mt-20">
+<div class="p-10 mt-10 bg-red-100">
+  <div class="flex justify-between items-center">
+    <input
+      type="text"
+      placeholder="Search by Name"
+      bind:value={searchTerm}
+      class="w-full mt-10 md:w-1/3"
+    />
+    <div class=" md:w-1/3">
+      <select 
+        bind:value={selectedType}
+        class="w-full mt-10 px-10">
+        <option value={null} disabled selected>Filter by Type</option>
+        {#each pokemonTypes as type}
+          <option value={type} class="capitalize">{type}</option>
+        {/each}
+
+      </select>
+    </div>
+  </div>
     {#if error}
     <h class="text-red-500 font-bold">{error}</h>
     {:else if loading}
-    <h class="text-black-500 font-bold text-center">Loading Pokemons.....</h>
+    <div class="text-center"><h class="text-black-500 font-extrabold text-bold text-center">Loading Pokemons.....</h></div>
     {:else}
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-        {#each pokemons as p }
-            <div class="bg-black/60 flex flex-col items-center text-white hover:scale-105 rounded-xl p-4 mt-2 transition">
-                <img src={p.sprites.front_default} alt={p.name} class="h-20 w-20 mb-0.2" />
+        {#each filteredPokemons as p }
+            <div role="button" 
+                tabindex="0"
+                on:click={() => openSelectedPokemon(p)}
+                on:keydown={(e) => e.key === 'Enter' && openSelectedPokemon(p)}
+                class="relative bg-black/70 flex flex-col items-center text-white hover:scale-105 rounded-xl p-4 mt-4 ">
+
+                <img src={p.sprites.front_default} alt={p.name} class="h-25 w-25 mb-0.2" />
                 <h2 class="capitalize font-bold">{p.name}</h2>
                 <p >#{p.id}</p>
                 <div class="flex space-x-2 mt-2">
-                    {#each p.types as t}
-                        <span class="px-2 py-1 text-xs rounded bg-yellow-200 text-black">{t.type.name}</span>                        
-                    {/each}
+                  {#each p.types as t}
+                    <span class="px-3 py-1 text-xs rounded bg-yellow-200 text-black">{t}</span>
+                  {/each}
                 </div>
-            </div>
+                <!-- Heart Button -->
+                <button
+                  class="absolute bottom-2 right-2 text-3xl"
+                  on:click|stopPropagation={() => toggleFavorite(p.id)}>
+                  <span class={favorites.includes(p.id) ? "text-red-500" : "text-white-400"}>&hearts;</span>
+                </button>
+              </div>
         {/each}
     </div>
     {/if}
 </div>
+
+<!--Selected pokemon Details Grid-->
+{#if selectedPokemon}
+  <div class="fixed inset-0 flex justify-center items-center bg-red-100">
+    <div class="relative w-full p-6 bg-black/50 border max-w-lg">
+      <button class="absolute top-2 right-3 px-2 py-1 text-3xl text-red-600 border bg-pink-300  text-center hover:bg-black " on:click={closeSelectedPokemon}>X</button>
+      <img src={selectedPokemon.sprites.front_default} alt="pokemon" class="mx-auto h-30 w-30 "/>
+      <h1 class="text-center font-bold">{selectedPokemon.name}</h1>
+      <p class="text-center">#{selectedPokemon.id}</p>
+      <h2 class="font-bold mb-3 ">Types :-</h2>
+      <div class="space-x-2 mb-4">
+        {#each selectedPokemon.types as t}
+        <span class="px-3 py-1 rounded-lg bg-yellow-200 border space-x-2">{t}</span>
+      {/each}
+      </div>
+      <h class="font-bold">Abilities:-</h>
+      {#each selectedPokemon.abilities as a}
+        <ul class="list-disc list-inside">
+          <li>{a}</li>
+        </ul>
+      {/each}
+      <h class="font-bold">Stats:-</h>
+      {#each selectedPokemon.stats as s}
+        <ul class="list-disc list-inside">
+          <li>{s.name} : {s.base_stat}</li>
+        </ul>
+      {/each}
+
+       <!-- Heart Button  -->
+      <button
+        class="absolute bottom-4 right-4 text-3xl"
+        on:click={() => toggleFavorite(selectedPokemon.id)}>
+        <span class= {favorites.includes(selectedPokemon.id) ? "text-red-500" : "text-white"} >&hearts;</span>
+      </button>
+    </div>
+  </div>
+{/if}
