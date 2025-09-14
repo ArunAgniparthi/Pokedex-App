@@ -1,6 +1,6 @@
 <script lang="ts">
     import {auth, googleProvider} from "$lib/firebase";
-    import {signInWithEmailAndPassword,signInWithPopup,GoogleAuthProvider,sendPasswordResetEmail} from "firebase/auth";
+    import {signInWithEmailAndPassword,signInWithPopup,sendPasswordResetEmail} from "firebase/auth";
     import {goto} from "$app/navigation";
 
     let email="";
@@ -8,7 +8,7 @@
     let errorMessage="";
     let successMessage="";
 
-    //Signin with mail & password
+    // Signin with mail & password
     async function handlemaillogin(e:Event) {
         e.preventDefault();
         errorMessage="";
@@ -21,12 +21,11 @@
             console.error("Failed",error);
         }
     }
-    //SignIn with Google
+    // SignIn with Google
     async function handleGoogleSignin() {
         errorMessage="";
         try {
-            const provider=new GoogleAuthProvider();
-            const result=await signInWithPopup(auth,provider);
+            const result=await signInWithPopup(auth,googleProvider);
             console.log("Signin successful",result.user);
             goto("/dashboard");
         } catch (error:any) {

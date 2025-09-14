@@ -3,19 +3,12 @@
     import {createUserWithEmailAndPassword,signInWithPopup,updateProfile} from "firebase/auth";
     import {goto} from "$app/navigation";
 
-    import * as firebaseApp  from "firebase/app";
-    console.log(firebaseApp);
-    import * as firebaseAuth  from "firebase/auth";
-    console.log(firebaseAuth);
-    import * as svelte  from "svelte";
-    console.log(svelte);
-
     let userName="";
     let email="";
     let password="";
     let errorMessage="";
 
-//SignUp with mail and password
+// SignUp with mail and password
 
     async function handleSignup(e:Event) {
         e.preventDefault();
@@ -30,7 +23,7 @@
             console.error("Failed to Signup",error);
         }
     }
-//SignUp with Google
+// SignUp with Google
 
     async function handleGoogleSignup() {
         errorMessage="";
