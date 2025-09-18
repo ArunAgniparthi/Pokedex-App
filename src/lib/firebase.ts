@@ -1,19 +1,20 @@
 import {initializeApp,getApp,getApps} from "firebase/app";
 import { getAuth,GoogleAuthProvider} from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-
+import { PUBLIC_FIREBASE_API_KEY,PUBLIC_FIREBASE_AUTH_DOMAIN,
+        PUBLIC_FIREBASE_POJECT_ID,PUBLIC_FIREBASE_STORAGE_BUCKET,
+        PUBLIC_FIREBASE_MESSAGING_SENDER_ID,PUBLIC_FIREBASE_APP_ID,
+        PUBLIC_FIREBASE_MEASUREMENT_ID} from "$env/static/public";
 const firebaseConfig = {
-  apiKey: "AIzaSyDqjQ-rP6b0yCLEGjMbkdWXOAuZ7kF3SNU",
-  authDomain: "pokedex-app-e1e5a.firebaseapp.com",
-  projectId: "pokedex-app-e1e5a",
-  storageBucket: "pokedex-app-e1e5a.firebasestorage.app",
-  messagingSenderId: "458076742911",
-  appId: "1:458076742911:web:34fd49fd201c2d203458ca",
-  measurementId: "G-5QXSM4V14S"
+  apiKey: PUBLIC_FIREBASE_API_KEY,
+  authDomain: PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: PUBLIC_FIREBASE_POJECT_ID,
+  storageBucket: PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: PUBLIC_FIREBASE_APP_ID,
+  measurementId: PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
 const app=getApps().length?getApp():initializeApp(firebaseConfig);
 
 export const auth=getAuth(app);
-export const db=getFirestore(app);
 export const googleProvider= new GoogleAuthProvider();

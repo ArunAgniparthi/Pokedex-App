@@ -15,7 +15,6 @@
       <span class="font-semibold">PokeAPI</span>. Our goal is to make exploring Pokemon
       fun, simple, and interactive.
     </p>
-
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="bg-white p-6 rounded-2xl shadow">
         <h2 class="text-xl font-semibold mb-2">💫 Features</h2>

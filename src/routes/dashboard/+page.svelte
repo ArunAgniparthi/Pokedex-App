@@ -1,39 +1,36 @@
 <script lang="ts">
-    import {auth,db}  from "$lib/firebase";
+    import {auth}  from "$lib/firebase";
     import {signOut,onAuthStateChanged,updateProfile} from "firebase/auth";
-    import {doc,setDoc,getDoc} from "firebase/firestore";
     import {goto} from "$app/navigation";
-    import {onMount} from "svelte";
-    import { GraphQLClient, gql } from "graphql-request";
     import {browser} from "$app/environment"
-    import {favorites} from "$lib/stores/favorites"
-
-    // variable declaration
-    let userName="user";
-    let profilePhoto:string|null=null;
-    let dropdownOpen=false;
-    let loading=true;
-    let unsubscribeAuth:(()=>void)|null=null;
+    import {fetchPokemons} from "$lib/stores/favorites"
+    import Heartbutton from "$lib/components/heartbutton.svelte";
+  // variable declaration
+    let userName= $state("User");
+    let profilePhoto= $state <string|null>(null);
+    let dropdownOpen= $state(false);
+    let loading= $state(true);
     // Fetching
-    let pokemons:any[]=[];
-    let error:string|null=null;
-
+    let pokemons= $state <any[]> ([]);
+    let error= $state <string|null> (null);
     // searching & Filtering
-    let searchTerm="";
-    let selectedType:string|null=null;
-    let pokemonTypes=['normal', 'fighting', 'flying', 'poison', 'ground', 'rock', 'bug',
+    let searchTerm= $state("");
+    let selectedType= $state <string|null> (null);
+    const pokemonTypes= ['normal', 'fighting', 'flying', 'poison', 'ground', 'rock', 'bug',
                       'ghost', 'steel', 'fire', 'water', 'grass', 'electric', 'psychic',
                       'ice', 'dragon', 'dark', 'fairy'];
-    let selectedPokemon:any=null;
+    let selectedPokemon= $state <any>(null);
 
-                        // FUNCTIONS
+    // FUNCTIONS
     // Profile dropdown control
     function handleDropdown(){
         dropdownOpen=!dropdownOpen;
     }
-
     // First Letter for Profile
-    $: firstLetter=userName.charAt(0).toUpperCase();
+    
+    let firstLetter = $derived(() =>  userName.charAt(0).toUpperCase());
+    // svelte-ignore state_referenced_locally
+        console.log(firstLetter());
 
     // Image select + Save + Upload
     async function handleProfilePhoto(e:Event) {
@@ -44,12 +41,6 @@
             reader.onload=async ()=>{
                 const img=reader.result as string;
                 profilePhoto=img;
-
-                const uid=auth.currentUser!.uid;
-                const docRef=doc(db,"user",uid)
-
-                await setDoc(docRef,{photoURL:img},{merge:true});
-                await updateProfile(auth.currentUser!,{photoURL:img});
             };
             reader.readAsDataURL(file);
     }
@@ -64,32 +55,29 @@
         }
     }
 
+    //Fetching pokemons
+    async function loadPokemons() {
+      loading=true;
+      error=null;
+      try {
+        pokemons= await fetchPokemons();
+      } catch (err:any) {
+        console.error("Failed to fetch pokemons",err);
+        error="Failed to fetch pokemons";
+      }finally{
+        loading=false;
+      }
+    }
     // Load Profile
-    onMount(()=>{
+    $effect(()=>{
       if(!browser) return;
-        unsubscribeAuth=onAuthStateChanged(auth,async (user)=>{
-            loading=true;
+        onAuthStateChanged(auth,async (user)=>{
             try {
+              loading=true;
               if (user) {
                 userName = user.displayName || user.email?.split("@")[0] || "User";
-
-                // Get doc from Firestore
-                const docRef = doc(db, "users", user.uid);
-                const snap = await getDoc(docRef);
-
-                if (snap.exists() && snap.data()?.photoURL) {
-                  profilePhoto = snap.data().photoURL as string;
-                } else if (user.photoURL) {
-                  // fallback to auth profile if present
-                  profilePhoto = user.photoURL;
-                } else {
-                  profilePhoto = null;
-                }
-              } else {
-                // Not logged in
-                userName = "User";
-                profilePhoto = null;
               }
+              await loadPokemons();
             } catch (err) {
               console.error("Error loading profile from Firestore:", err);
             } finally {
@@ -97,10 +85,10 @@
             }
           });
           document.addEventListener("click",handleDropdownClose);
-          fetchPokemons();
-          return removeEventListener("click",handleDropdownClose);
+          return ()=>{ 
+            document.removeEventListener("click",handleDropdownClose);
+          }
         });
-
     //LogOut
     async function handleLogout() {
       if(!browser || !auth)return;
@@ -111,63 +99,12 @@
             console.error("Logout error:",error);
         }
     }
-
-    // Fetch Pokemon Dataset using GraphQL
-    // GraphQL Client
-    const client = new GraphQLClient("https://beta.pokeapi.co/graphql/v1beta");
-    async function fetchPokemons() {
-        loading = true;
-        error = null;
-
-        try {
-          const query = gql`
-            query {
-              pokemon_v2_pokemon(limit: 1000) {
-                id
-                name
-                pokemon_v2_pokemontypes {
-                  pokemon_v2_type { name }
-                }
-                pokemon_v2_pokemonabilities {
-                  pokemon_v2_ability { name }
-                }
-                pokemon_v2_pokemonstats {
-                  base_stat
-                  pokemon_v2_stat { name }
-                }
-              }
-            }
-          `;
-
-          const data:any = await client.request(query);
-
-          pokemons = data.pokemon_v2_pokemon.map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            sprites: {
-              front_default: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.id}.png`
-            },
-            types: p.pokemon_v2_pokemontypes.map((t: any) => t.pokemon_v2_type.name) ,
-            
-            abilities: p.pokemon_v2_pokemonabilities.map((a: any) =>a.pokemon_v2_ability.name),
-            stats: p.pokemon_v2_pokemonstats.map((s: any) => ({
-              name: s.pokemon_v2_stat.name,
-              base_stat: s.base_stat
-            }))
-          }));
-        } catch (err: any) {
-          console.error("Failed to fetch Pokémon",err);
-        } finally {
-          loading = false;
-        }
-      }
-
       // Searching and Filtering
-      $: filteredPokemons=pokemons.filter((p:any)=>{
-        const matchesName=p.name.toLowerCase().includes(searchTerm.toLocaleLowerCase());
+      let filteredPokemons= $derived (pokemons.filter((p:any)=>{
+        const matchesName=p.name.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesType=selectedType?p.types.includes(selectedType) :true;
         return matchesName && matchesType;
-      });
+      }))
 
       // Details open fun
       function openSelectedPokemon(p:any){
@@ -177,31 +114,24 @@
       function closeSelectedPokemon(){
         selectedPokemon=null;
       }
-       // Handle Favorites
-      function handleFavorite(pokemonId: number) {
-        favorites.update((list)=>{
-          if (list.includes(pokemonId)) {
-          return list.filter((id) => id !== pokemonId);
-        } else {
-          return[...list, pokemonId];
-        }
-        });
-      }
+      
 
 </script>
 <nav class="flex justify-between items-center px-6 py-3 absolute top-0 left-0 w-full bg-black text-white">
     <h1 class="font-extrabold text-xl">POKEDEX</h1>
     <div class="flex items-center space-x-6">
+        <!-- svelte-ignore event_directive_deprecated -->
         <a href="/dashboard" class="hover:text-yellow-300 text-medium" on:click={()=>location.reload()}>Pokemons</a>
-        <a href="/favorites" class="hover:text-yellow-300 text-medium">Favoirites</a>
+        <a href="/favorites" class="hover:text-yellow-300 text-medium">Favorites</a>
         <a href="/aboutus" class="hover:text-yellow-300 text-medium">About Us</a>
 
         <div class="relative max-w-lg">
+            <!-- svelte-ignore event_directive_deprecated -->
             <button id="profile-button" class="flex items-center space-x-2 max-w-lg" on:click={handleDropdown}>
                 {#if profilePhoto}
                     <img src={profilePhoto} alt="profile" class="flex items-center justify-center rounded-full h-8 w-8 bg-cover object-cover"/>
                 {:else}
-                <span class="flex items-center justify-center rounded-full h-8 w-8 font-bold bg-yellow-400 text-black">{firstLetter}</span>
+                <span class="flex items-center justify-center rounded-full h-8 w-8 font-bold bg-yellow-400 text-black">{firstLetter()}</span>
                 {/if}
                 <span class="hover:text-yellow-300">Profile</span>
             </button>
@@ -212,7 +142,7 @@
                         {#if profilePhoto}
                             <img src={profilePhoto} alt="Profile" class="flex items-center max-w-lg justify-center rounded-full h-10 w-10 bg-cover object-cover"/>
                         {:else}
-                            <span class="flex items-center justify-center rounded-full h-10 w-10 font-bold bg-yellow-400 text-xl text-black">{firstLetter}</span>
+                            <span class="flex items-center justify-center rounded-full h-10 w-10 font-bold bg-yellow-400 text-xl text-black">{firstLetter()}</span>
                         {/if}
                         <div>
                             <span class="font-bold">{userName}</span>
@@ -223,7 +153,9 @@
                 <label for="photo-change" class="block px-4 py-2 text-center hover:text-black hover:bg-yellow-300 text-sm">
                     Change Profile
                 </label>
+                <!-- svelte-ignore event_directive_deprecated -->
                 <input id="photo-change" type="file" accept="image/*" class="hidden" on:change={handleProfilePhoto}>
+                <!-- svelte-ignore event_directive_deprecated -->
                 <button on:click={handleLogout} class="block px-4 py-3 w-full text-red-500 hover:bg-yellow-300 hover:text-black">
                     Log Out
                 </button>
@@ -261,11 +193,12 @@
     {:else}
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
         {#each filteredPokemons as p }
-            <div role="button" 
-                tabindex="0"
-                on:click={() => openSelectedPokemon(p)}
-                on:keydown={(e) => e.key === 'Enter' && openSelectedPokemon(p)}
-                class="relative bg-black/70 flex flex-col items-center text-white hover:scale-105 rounded-xl p-4 mt-4 ">
+            <!-- svelte-ignore event_directive_deprecated -->
+            <!-- svelte-ignore a11y_interactive_supports_focus -->
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <div role="button"
+                class="relative bg-black/70 flex flex-col items-center text-white hover:scale-105 rounded-xl p-4 mt-4 "
+                on:click={() => openSelectedPokemon(p)}>
                 <img src={p.sprites.front_default} alt={p.name} class="h-25 w-25 mb-0.2" />
                 <h2 class="capitalize font-bold">{p.name}</h2>
                 <p >#{p.id}</p>
@@ -275,11 +208,7 @@
                   {/each}
                 </div>
                 <!-- Heart Button -->
-                <button
-                  class="absolute bottom-2 right-2 text-3xl"
-                  on:click|stopPropagation={() => handleFavorite(p.id)}>
-                  <span class={$favorites.includes(p.id) ? "text-red-500" : "text-white-400"}>&hearts;</span>
-                </button>
+                <Heartbutton pokemonId={p.id}/>
               </div>
         {/each}
     </div>
@@ -290,6 +219,7 @@
 {#if selectedPokemon}
   <div class="fixed inset-0 flex justify-center items-center bg-red-100">
     <div class="relative w-full p-6 bg-black/50 border max-w-lg">
+      <!-- svelte-ignore event_directive_deprecated -->
       <button class="absolute top-2 right-3 px-2 py-1 text-3xl text-red-600 border bg-pink-300  text-center hover:bg-black " on:click={closeSelectedPokemon}>X</button>
       <img src={selectedPokemon.sprites.front_default} alt="pokemon" class="mx-auto h-30 w-30 "/>
       <h1 class="text-center font-bold">{selectedPokemon.name}</h1>
@@ -314,11 +244,7 @@
       {/each}
 
        <!-- Heart Button  -->
-      <button
-        class="absolute bottom-4 right-4 text-3xl"
-        on:click={() => handleFavorite(selectedPokemon.id)}>
-        <span class= {$favorites.includes(selectedPokemon.id) ? "text-red-500" : "text-white"} >&hearts;</span>
-      </button>
+        <Heartbutton pokemonId={selectedPokemon.id}/>
     </div>
   </div>
 {/if}

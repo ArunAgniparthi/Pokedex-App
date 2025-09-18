@@ -3,10 +3,10 @@
     import {signInWithEmailAndPassword,signInWithPopup,sendPasswordResetEmail} from "firebase/auth";
     import {goto} from "$app/navigation";
 
-    let email="";
-    let password="";
-    let errorMessage="";
-    let successMessage="";
+    let email= $state("");
+    let password= $state("");
+    let errorMessage= $state("");
+    let successMessage= $state("");
 
     // Signin with mail & password
     async function handlemaillogin(e:Event) {
@@ -17,7 +17,7 @@
             console.log("Signin successful",userCredential.user);
             goto("/dashboard");
         } catch (error:any) {
-            errorMessage=error.message;
+            errorMessage="Failed to login Try Again";
             console.error("Failed",error);
         }
     }
@@ -58,6 +58,7 @@
 <div class="flex justify-center bg-cover bg-center items-center min-h-screen" style="background-image: url('https://images8.alphacoders.com/134/1349281.png');">
     <div class="bg-white/50 border rounded-xl p-8 max-w-lg w-full">
         <h1 class="text-2xl text-center font-bold mb-6">Login</h1>
+        <!-- svelte-ignore event_directive_deprecated -->
         <form class="space-y-4" on:submit={handlemaillogin}>
             <input
             type="email"
@@ -76,18 +77,16 @@
 
         <p class="mt-3 font-medium text-center">or</p>
 
+        <!-- svelte-ignore event_directive_deprecated -->
         <button class="w-full border rounded-xl hover:bg-gray-500 bg-blue-300 py-2 mt-3" on:click={handleGoogleSignin}>SignIn with Google</button>
-
+        <!-- svelte-ignore event_directive_deprecated -->
         <button class="mt-3 text-blue-500 text-md hover:underline" on:click={handleForgotPass}>Forgot Password?</button>
-
         {#if successMessage}
         <p class="text-center text-green-600 text-medium">{successMessage}</p>
         {/if}
-
         {#if errorMessage}
         <p class="text-center text-red-600 text-medium">{errorMessage}</p>
         {/if}
-
         <p class="mt-3 test-start">You dont an have account?
             <a href="/signup" class="text-red-500 hover:underline">SignUp</a>
         </p>

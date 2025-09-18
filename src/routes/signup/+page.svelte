@@ -3,10 +3,10 @@
     import {createUserWithEmailAndPassword,signInWithPopup,updateProfile} from "firebase/auth";
     import {goto} from "$app/navigation";
 
-    let userName="";
-    let email="";
-    let password="";
-    let errorMessage="";
+    let userName=$state("");
+    let email=$state("");
+    let password=$state("");
+    let errorMessage=$state("");
 
 // SignUp with mail and password
 
@@ -49,6 +49,7 @@
 <div class="flex justify-center h-screen items-center bg-cover bg-center" style="background-image: url('https://images8.alphacoders.com/134/1349281.png');">
     <div class="bg-white/50 border rounded-xl p-8 shadow-lg w-full max-w-lg">
         <h1 class="text-2xl font-bold text-center mb-6">Create an Account</h1>
+        <!-- svelte-ignore event_directive_deprecated -->
         <form class="space-y-4" on:submit={handleSignup}>
             <input
             type="text"
@@ -73,6 +74,7 @@
         
         <p class="mt-3 text-center font-medium">Or</p>
 
+        <!-- svelte-ignore event_directive_deprecated -->
         <button on:click={handleGoogleSignup} class="mt-3 border w-full bg-blue-500 rounded-xl hover:bg-red-500 font-medium py-3">SignIn with Google</button>
 
         {#if errorMessage}
