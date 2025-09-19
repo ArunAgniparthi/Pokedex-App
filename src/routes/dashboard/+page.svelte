@@ -1,6 +1,6 @@
 <script lang="ts">
     import {auth}  from "$lib/firebase";
-    import {signOut,onAuthStateChanged,updateProfile} from "firebase/auth";
+    import {signOut,onAuthStateChanged} from "firebase/auth";
     import {goto} from "$app/navigation";
     import {browser} from "$app/environment"
     import {fetchPokemons} from "$lib/stores/favorites"
@@ -27,10 +27,7 @@
         dropdownOpen=!dropdownOpen;
     }
     // First Letter for Profile
-    
     let firstLetter = $derived(() =>  userName.charAt(0).toUpperCase());
-    // svelte-ignore state_referenced_locally
-        console.log(firstLetter());
 
     // Image select + Save + Upload
     async function handleProfilePhoto(e:Event) {
@@ -129,7 +126,7 @@
             <!-- svelte-ignore event_directive_deprecated -->
             <button id="profile-button" class="flex items-center space-x-2 max-w-lg" on:click={handleDropdown}>
                 {#if profilePhoto}
-                    <img src={profilePhoto} alt="profile" class="flex items-center justify-center rounded-full h-8 w-8 bg-cover object-cover"/>
+                    <img src={profilePhoto} alt="profile" class="flex justify-center rounded-full h-8 w-8 bg-cover object-cover"/>
                 {:else}
                 <span class="flex items-center justify-center rounded-full h-8 w-8 font-bold bg-yellow-400 text-black">{firstLetter()}</span>
                 {/if}
@@ -204,7 +201,7 @@
                 <p >#{p.id}</p>
                 <div class="flex space-x-2 mt-2">
                   {#each p.types as t}
-                    <span class="px-3 py-1 text-xs rounded bg-yellow-200 text-black">{t}</span>
+                    <span class="px-3 py-1 text-xs capitalize rounded bg-yellow-200 text-black">{t}</span>
                   {/each}
                 </div>
                 <!-- Heart Button -->

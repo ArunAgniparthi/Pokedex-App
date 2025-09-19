@@ -1,4 +1,4 @@
-import {initializeApp,getApp,getApps} from "firebase/app";
+import {initializeApp} from "firebase/app";
 import { getAuth,GoogleAuthProvider} from "firebase/auth";
 import { PUBLIC_FIREBASE_API_KEY,PUBLIC_FIREBASE_AUTH_DOMAIN,
         PUBLIC_FIREBASE_POJECT_ID,PUBLIC_FIREBASE_STORAGE_BUCKET,
@@ -14,7 +14,6 @@ const firebaseConfig = {
   measurementId: PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-const app=getApps().length?getApp():initializeApp(firebaseConfig);
-
+const app=initializeApp(firebaseConfig);
 export const auth=getAuth(app);
 export const googleProvider= new GoogleAuthProvider();

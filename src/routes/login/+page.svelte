@@ -55,7 +55,7 @@
         <a href="/signup" class="hover:yello-300 ">Sign Up</a>
     </div>
 </nav>
-<div class="flex justify-center bg-cover bg-center items-center min-h-screen" style="background-image: url('https://images8.alphacoders.com/134/1349281.png');">
+<div class="flex justify-center bg-cover bg-center items-center h-screen" style="background-image: url('https://images8.alphacoders.com/134/1349281.png');">
     <div class="bg-white/50 border rounded-xl p-8 max-w-lg w-full">
         <h1 class="text-2xl text-center font-bold mb-6">Login</h1>
         <!-- svelte-ignore event_directive_deprecated -->

@@ -1,6 +1,5 @@
 <script lang="ts">
   import { favorites,fetchFavorites } from "$lib/stores/favorites";
-  import { get } from "svelte/store";
   import Heartbutton from "$lib/components/heartbutton.svelte";
 
 
@@ -13,7 +12,7 @@
     loading=true;
     error=null;
     try {
-      const favIds= get(favorites);
+      const favIds= $favorites;
       favPokemons=await fetchFavorites(favIds);
     } catch (err:any) {
       console.error("Failed to fetch Favorites",err);
